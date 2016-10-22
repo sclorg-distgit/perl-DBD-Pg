@@ -1,0 +1,71 @@
+From 9e845bf5c026ed6f131e7fd6c169f849e1369d2f Mon Sep 17 00:00:00 2001
+From: Pavel Raiskup <praiskup@redhat.com>
+Date: Fri, 15 Jul 2016 21:00:03 +0200
+Subject: [PATCH] compatible 'client_encoding' against postgresql 8.4
+
+---
+ t/02attribs.t         |  4 ++--
+ t/dbdpg_test_setup.pl | 11 ++++++-----
+ 2 files changed, 8 insertions(+), 7 deletions(-)
+
+diff --git a/t/02attribs.t b/t/02attribs.t
+index 9547d27..2d09372 100644
+--- a/t/02attribs.t
++++ b/t/02attribs.t
+@@ -1100,7 +1100,7 @@ is ($attrib, 'st', $t);
+ # Need a separate connection to keep the output size down
+ #
+ 
+-my $dbh4 = connect_database({quickreturn => 1});
++my $dbh4 = connect_database({quickreturn => 2});
+ 
+ $t='Database handle attribute "ChildHandles" is an empty list on startup';
+ $attrib = $dbh4->{ChildHandles};
+@@ -1273,7 +1273,7 @@ if ($client_level ne 'error') {
+ #
+ 
+ $t='Database handle attribute "ErrCount" starts out at 0';
+-$dbh4 = connect_database({quickreturn => 1});
++$dbh4 = connect_database({quickreturn => 2});
+ is ($dbh4->{ErrCount}, 0, $t);
+ 
+ $t='Database handle attribute "ErrCount" is incremented with set_err()';
+diff --git a/t/dbdpg_test_setup.pl b/t/dbdpg_test_setup.pl
+index 275e801..053b077 100644
+--- a/t/dbdpg_test_setup.pl
++++ b/t/dbdpg_test_setup.pl
+@@ -235,10 +235,6 @@ version: $version
+ 		$testuser = 'postgres';
+ 	}
+ 
+-    # non-ASCII parts of the tests assume UTF8
+-    $testdsn =~ s/;?\bclient_encoding=[^;]+//;
+-    $testdsn .= ';client_encoding=utf8';
+-
+ 	## From here on out, we don't return directly, but save it first
+   GETHANDLE: {
+ 		eval {
+@@ -554,7 +550,7 @@ version: $version
+ 		}
+ 
+ 		## Attempt to connect to this server
+-		$testdsn = "dbi:Pg:dbname=postgres;client_encoding=utf8;port=$testport";
++		$testdsn = "dbi:Pg:dbname=postgres;port=$testport";
+ 		if ($^O =~ /Win32/) {
+ 			$testdsn .= ';host=localhost';
+ 		}
+@@ -651,6 +647,11 @@ version: $version
+ 
+ 	$debug and diag "Got a database handle ($dbh)";
+ 
++	if (!$arg->{quickreturn} or 1 != $arg->{quickreturn}) {
++		## non-ASCII parts of the tests assume UTF8
++		$dbh->do('SET client_encoding = utf8');
++	}
++
+ 	if ($arg->{quickreturn}) {
+ 		$debug and diag 'Returning via quickreturn';
+ 		return $helpconnect, '', $dbh;
+-- 
+2.7.4
+
